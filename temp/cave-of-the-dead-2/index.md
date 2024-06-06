@@ -1,3 +1,7 @@
+---
+permalink: /cave-of-the-dead-2.html
+---
+
 # Warning
 Currently nothing here
 \

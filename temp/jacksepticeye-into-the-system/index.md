@@ -1,3 +1,7 @@
+---
+permalink: /jacksepticeye-into-the-system.html
+---
+
 # Downloads
 
 [Binaries](https://pikakid98-games.github.io/dl/jacksepticeye-into-the-system/bin)

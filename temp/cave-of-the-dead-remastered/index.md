@@ -1,3 +1,7 @@
+---
+permalink: /cave-of-the-dead-remastered.html
+---
+
 # Warning
 Currently nothing here
 \
