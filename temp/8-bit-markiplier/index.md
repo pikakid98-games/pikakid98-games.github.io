@@ -2,10 +2,6 @@
 permalink: /8-bit-markiplier.html
 ---
 
-###### Temp layout
-
-[< Back](https://pikakid98-games.github.io)
-
 # Warning
 Currently nothing here
 \
