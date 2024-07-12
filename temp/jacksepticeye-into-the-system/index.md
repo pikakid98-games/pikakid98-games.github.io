@@ -10,4 +10,4 @@ permalink: /jacksepticeye-into-the-system.html
 # Warning
 Visit this website for a more feature rich explanation
 \
-Visit [> Here <](https://pikakid98games.wordpress.com/jacksepticeyeintothesystem) instead
+Visit [> Here <](https://pikakid98.github.io/classic/pikakid98games.wordpress.com/jacksepticeyeintothesystem) instead
