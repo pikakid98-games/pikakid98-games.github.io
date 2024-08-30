@@ -1,0 +1,25 @@
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+}
+
+#footer-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    background: url('../footer-script/footloop.png') repeat-x;
+    z-index: 10; /* Set a higher z-index to ensure it is on top */
+}
+
+#footer-middle-image {
+    display: inline-block;
+    margin: 0 auto;
+    cursor: pointer;
+    z-index: 11; /* Ensure the image is above the container */
+    position: relative; /* Ensure it's positioned in context */
+    max-width: 100%; /* Responsive */
+    height: auto; /* Maintain aspect ratio */
+}
