@@ -1,13 +1,3 @@
-<!-- Before you ask.. Yes, I did in fact use ChatGPT for this script
-	 List of parameters:
-        // 1. os - Operating system (e.g., windows, mac, linux, android, ios)
-        // 2. repo - Repository name to download from
-        // 3. source-code - Type of download (1 for zip with source code, 2 for main branch source)
-        // 4. ver - Specific version tag to fetch
-        // 5. dev - Indicates if the development version should be fetched (1 for true)
-        // 6. file - Specific file name to fetch
-        // 7. owner - GitHub owner name (default: pikakid98-games) -->
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -42,6 +32,11 @@
             font-size: 20px;
             margin: 20px;
         }
+
+        .rate-limit-warning {
+            color: yellow;
+            font-size: 20px;
+        }
     </style>
 </head>
 
@@ -56,6 +51,7 @@
         <h1 id="download-title" style="display: none;">Downloading the files now</h1>
         <p id="download-prompt" style="display: none;">If the download has not started, <a id="download-link" href="#">Click Here</a></p>
         <div id="message"></div>
+        <div id="rate-limit-message" class="rate-limit-warning"></div>
         <div id="invalid-os-warning"></div>
     </div>
     <script>
@@ -73,25 +69,13 @@
         function getOperatingSystem() {
             const params = getQueryParameters();
             if (params['os']) {
-                const os = params['os'].toLowerCase();
-                if (os === 'android' || os === 'ios') {
-                    return 'invalid'; // This case will redirect to the Rickroll
-                }
-                if (['windows', 'mac', 'linux'].includes(os)) {
-                    return os;
-                } else {
-                    return 'invalid';
-                }
+                return params['os'].toLowerCase();
             }
 
-            const userAgent = window.navigator.userAgent;
-            if (userAgent.indexOf("Windows") !== -1) {
-                return "windows";
-            } else if (userAgent.indexOf("Mac") !== -1) {
-                return "mac";
-            } else if (userAgent.indexOf("Linux") !== -1) {
-                return "linux";
-            }
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            if (userAgent.includes("windows")) return "windows";
+            if (userAgent.includes("mac")) return "mac";
+            if (userAgent.includes("linux")) return "linux";
             return "unknown";
         }
 
@@ -102,7 +86,9 @@
                 const reset = response.headers.get('X-RateLimit-Reset');
                 if (remaining === '0') {
                     const resetTime = new Date(reset * 1000);
-                    throw new Error(`Rate limit exceeded. Please try again after ${resetTime.toLocaleString()}.`);
+                    const rateLimitMessage = `Rate limit exceeded. Please try again after ${resetTime.toLocaleString()}.`;
+                    document.getElementById("rate-limit-message").textContent = rateLimitMessage;
+                    throw new Error(rateLimitMessage);
                 }
             }
             if (!response.ok) {
@@ -130,96 +116,82 @@
 
         async function downloadFile() {
             const params = getQueryParameters();
+            const os = getOperatingSystem();
 
-            // Check if there are no parameters
-            if (Object.keys(params).length === 0) {
-                alert("No query parameters present. Closing the tab.");
-                window.close(); // Close the tab if no parameters are present
-                return; // Stop further execution
+            // Check if 'os' is Android, iOS, or mobile
+            if (['android', 'ios', 'mobile'].includes(os)) {
+                displayMessage("Fetching your download... Just a moment.");
+                setTimeout(() => {
+                    // Redirect to rickroll after a delay
+                    window.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+                }, 3000); // 3 seconds delay
+                return;
             }
 
-            const ownerParam = params['owner'] || 'pikakid98-games'; // Default to 'pikakid98-games' if not specified
+            if (Object.keys(params).length === 0) {
+                alert("No query parameters present. Closing the tab.");
+                window.close();
+                return;
+            }
+
+            const ownerParam = params['owner'] || 'pikakid98-games';
             const repoParam = params['repo'];
             const specificFileParam = params['file'];
-            const sourceCodeParam = params['source-code'];
-            const versionParam = params['ver']; // Get the 'ver' parameter
-            const isDev = params['dev'] === "1"; // Check for dev parameter
+            const versionParam = params['ver'];
+            const isDev = params['dev'] === "1";
 
             if (!repoParam) {
                 displayMessage("No repository specified in the query parameter.");
                 return;
             }
 
-            const repoName = repoParam;
             let fileUrl;
-            const os = getOperatingSystem();
 
-            if (os === 'invalid') {
-                // Redirect to Rickroll if iOS or Android is chosen.
-                window.location.href = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"; // Redirect link to Rickroll
-                return; // Stop further execution
+            if (os === 'unknown' || (os !== 'windows' && os !== 'mac' && os !== 'linux')) {
+                displayMessage("Unsupported operating system. Click the link below to download anyway (recommend using WINE from https://www.winehq.org)");
+                const downloadUrl = `https://github.com/${ownerParam}/${repoParam}/releases/latest`; // fallback URL
+                document.getElementById("invalid-os-warning").innerHTML = `<a href="${downloadUrl}" target="_blank">Download Anyway</a>`;
+                return;
             }
 
             try {
                 let releases;
 
                 if (versionParam) {
-                    // Fetch specific version if 'ver' parameter is provided
-                    const release = await fetchSpecificRelease(repoName, versionParam, ownerParam);
+                    const release = await fetchSpecificRelease(repoParam, versionParam, ownerParam);
                     releases = [release];
                 } else {
-                    // Fetch latest releases
-                    releases = await fetchReleases(repoName, ownerParam);
+                    releases = await fetchReleases(repoParam, ownerParam);
                 }
 
-                // Determine file URL based on source code parameter or specific file request
-                if (sourceCodeParam === '1') {
-                    fileUrl = releases[0].zipball_url;
-                } else if (sourceCodeParam === '2') {
-                    fileUrl = `https://github.com/${ownerParam}/${repoName}/archive/refs/heads/main.zip`;
-                } else {
-                    const assets = releases.flatMap(release => release.assets);
-                    if (specificFileParam) {
-                        const specificFile = assets.find(asset => asset.name === specificFileParam);
-                        if (specificFile) {
-                            fileUrl = specificFile.browser_download_url;
-                        } else {
-                            throw new Error(`File "${specificFileParam}" not found in the repository.`);
-                        }
+                // File fetching logic
+                const assets = releases.flatMap(release => release.assets);
+                if (specificFileParam) {
+                    const specificFile = assets.find(asset => asset.name === specificFileParam);
+                    if (specificFile) {
+                        fileUrl = specificFile.browser_download_url;
                     } else {
-                        // Default to finding a suitable file based on OS
-                        const sevenZipFiles = assets.filter(asset => asset.name.endsWith('.7z'));
+                        throw new Error(`File "${specificFileParam}" not found in the repository.`);
+                    }
+                } else {
+                    const foundFiles = assets.filter(asset =>
+                        asset.name.toLowerCase().includes(`_${os}`) &&
+                        (asset.name.toLowerCase().endsWith('.zip') || asset.name.toLowerCase().endsWith('.7z'))
+                    );
 
-                        if (os === "windows") {
-                            if (sevenZipFiles.length > 0) {
-                                fileUrl = sevenZipFiles[0].browser_download_url;
-                            }
-                        } else if (os !== "unknown") {
-                            const osSpecificFiles = sevenZipFiles.filter(asset => asset.name.endsWith(`_${os}.7z`));
-                            if (osSpecificFiles.length > 0) {
-                                fileUrl = osSpecificFiles[0].browser_download_url;
-                            }
-                        }
-
-                        if (!fileUrl) {
-                            throw new Error(`No appropriate file found for OS: ${os} in this repository.`);
-                        }
+                    if (foundFiles.length > 0) {
+                        fileUrl = foundFiles[0].browser_download_url; // Get the first matched file
+                    } else {
+                        throw new Error(`No suitable file found for OS: ${os}.`);
                     }
                 }
 
                 // Check for dev parameter
-                if (isDev && !versionParam) { // Ensure we only check for dev if no version parameter is set
-                    const latestPreRelease = await fetchLatestPreRelease(repoName, ownerParam);
-                    const stableReleaseDate = new Date(releases[0].published_at);
+                if (isDev && !versionParam) {
+                    const latestPreRelease = await fetchLatestPreRelease(repoParam, ownerParam);
                     const latestPreReleaseFound = latestPreRelease.find(release => release.prerelease);
                     if (latestPreReleaseFound) {
-                        const latestPreReleaseDate = new Date(latestPreReleaseFound.published_at);
-                        if (latestPreReleaseDate < stableReleaseDate) {
-                            throw new Error("The latest version is stable. Cannot download pre-release.");
-                        }
-                        fileUrl = latestPreReleaseFound.assets[0].browser_download_url; // Assuming you want the first asset
-                    } else {
-                        throw new Error("No pre-release version available.");
+                        fileUrl = latestPreReleaseFound.assets[0].browser_download_url;
                     }
                 }
 
